@@ -1,69 +1,34 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useState } from "react";
+
+type Analysis = { score: number; summary: string; strengths: string[]; gaps: string[]; improvements: string[]; questions: string[]; source?: "gemini" | "local" };
+const sampleResume = `Aarav Sharma\nComputer Science student with projects in React and Python.\n\nSkills: JavaScript, React, HTML, CSS, Python, SQL, Git, REST APIs\nProjects: Built a task manager with React and a sentiment analysis model with Python.\nEducation: B.Tech Computer Science, 2026`;
+const sampleJob = `Frontend Developer Intern\nWe are looking for a developer who can build accessible, responsive interfaces.\n\nRequirements: React, TypeScript, Next.js, REST APIs, Git, testing, responsive design and communication.`;
+
+function localAnalysis(resume: string, job: string, role: string): Analysis {
+  const skills = ["React", "TypeScript", "Next.js", "JavaScript", "Python", "SQL", "Git", "REST APIs", "testing", "responsive design"];
+  const resumeLower = resume.toLowerCase(), jobLower = job.toLowerCase();
+  const requested = skills.filter((skill) => jobLower.includes(skill.toLowerCase()));
+  const strengths = requested.filter((skill) => resumeLower.includes(skill.toLowerCase()));
+  const gaps = requested.filter((skill) => !resumeLower.includes(skill.toLowerCase()));
+  const score = requested.length ? Math.max(35, Math.round((strengths.length / requested.length) * 100)) : 62;
+  return { score, summary: `Your profile shows a ${score >= 70 ? "strong" : "promising"} starting point for the ${role || "target"} role. Focus on the missing skills below and make your project impact more measurable.`, strengths: strengths.length ? strengths : ["Clear technical foundation", "Hands-on project experience", "Relevant computer science education"], gaps: gaps.length ? gaps : ["Add role-specific tools from the job description", "Show testing or deployment experience"], improvements: ["Add numbers to project outcomes, such as speed, users, or accuracy.", "Put the most relevant skills and project near the top of your resume.", "Create one small project that demonstrates the highest-priority missing skill."], questions: [`Walk me through a project that best prepares you for this ${role || "role"}.`, `How would you build and test a responsive feature for this team?`, "Tell me about a technical problem you faced and how you debugged it.", `How would you improve your experience with ${gaps[0] || "the most important requirement"}?`] };
+}
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  const [resume, setResume] = useState(""), [job, setJob] = useState(""), [role, setRole] = useState("");
+  const [result, setResult] = useState<Analysis | null>(null), [loading, setLoading] = useState(false), [uploading, setUploading] = useState<"resume" | "job" | "">(""), [error, setError] = useState("");
+  const fillSample = () => { setResume(sampleResume); setJob(sampleJob); setRole("Frontend Developer Intern"); setResult(null); setError(""); };
+  const uploadPdf = async (file: File, target: "resume" | "job") => { setUploading(target); setError(""); try { const formData = new FormData(); formData.append("file", file); const response = await fetch("/api/extract", { method: "POST", body: formData }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "PDF could not be read"); if (target === "resume") setResume(data.text); else setJob(data.text); } catch (uploadError) { setError(uploadError instanceof Error ? uploadError.message : "PDF could not be read"); } finally { setUploading(""); } };
+  const analyze = async (event: FormEvent) => { event.preventDefault(); if (!resume.trim() || !job.trim()) { setError("Resume aur job description dono add karo."); return; } setLoading(true); setError(""); try { const response = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resume, job, role }) }); if (!response.ok) throw new Error("Analysis failed"); setResult(await response.json()); } catch { setResult(localAnalysis(resume, job, role)); setError("AI service unavailable. Local demo analysis dikhaya ja raha hai."); } finally { setLoading(false); } };
+  return <main className="app-shell">
+    <header className="topbar"><div className="brand"><span className="brand-mark">✦</span><span>CareerLens</span></div><div className="topbar-meta"><span className="status-dot" /> Local workspace <span className="divider" /> AI placement analyzer</div></header>
+    <section className="intro"><div><p className="eyebrow">PLACEMENT TOOLKIT / 01</p><h1>Know how ready you are<br /><em>for the role.</em></h1><p className="lede">Compare your resume with any job description and turn the gaps into a focused preparation plan.</p></div><button className="sample-button" onClick={fillSample}>↗ Load sample data</button></section>
+    <form className="workspace" onSubmit={analyze}><section className="inputs-panel"><SectionLabel number="01" title="Add your details" subtitle="Paste text or upload a PDF from your resume and target job." /><div className="field-row"><label className="field small-field"><span>Target role <b>optional</b></span><input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Frontend Developer" /></label></div><div className="field-row two-col"><label className="field"><span>Resume <b>required</b></span><div className="upload-row"><input className="file-input" type="file" accept="application/pdf,.pdf" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadPdf(file, "resume"); }} /><span>{uploading === "resume" ? "Reading PDF..." : "Upload resume PDF"}</span></div><textarea value={resume} onChange={(e) => setResume(e.target.value)} placeholder="Paste your resume text here..." /></label><label className="field"><span>Job description <b>required</b></span><div className="upload-row"><input className="file-input" type="file" accept="application/pdf,.pdf" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadPdf(file, "job"); }} /><span>{uploading === "job" ? "Reading PDF..." : "Upload job PDF"}</span></div><textarea value={job} onChange={(e) => setJob(e.target.value)} placeholder="Paste the job description here..." /></label></div><div className="form-footer"><span className="privacy-note">◉ Your text stays in this local demo.</span><button className="analyze-button" disabled={loading || Boolean(uploading)}>{loading ? "Analyzing..." : "Analyze match  →"}</button></div>{error && <p className="notice">{error}</p>}</section><section className="results-panel"><SectionLabel number="02" title="Your analysis" subtitle="Signals that help you prepare with intent." />{!result ? <div className="empty-state"><div className="empty-icon">✦</div><h3>Your results will appear here</h3><p>Fill in both fields, then run an analysis to see your match score, skill gaps and interview prep.</p></div> : <Results result={result} />}</section></form>
+    <footer><span>CareerLens</span><span>Built for smarter placement prep</span><span>v0.1 · local demo</span></footer>
+  </main>;
 }
+function SectionLabel({ number, title, subtitle }: { number: string; title: string; subtitle: string }) { return <div className="section-label"><span>{number}</span><div><h2>{title}</h2><p>{subtitle}</p></div></div>; }
+function Results({ result }: { result: Analysis }) { return <div className="results-content"><div className="score-row"><div className="score-ring" style={{ "--score": `${result.score * 3.6}deg` } as React.CSSProperties}><strong>{result.score}</strong><span>/100</span></div><div><p className="result-kicker">Resume fit score <span className={`source-badge ${result.source === "gemini" ? "ai" : "local"}`}>{result.source === "gemini" ? "✦ Gemini AI" : "○ Local fallback"}</span></p><h3>{result.score >= 70 ? "Strong match" : "Good foundation"}</h3><p className="summary">{result.summary}</p></div></div><div className="result-grid"><ResultBlock title="What already works" tone="green" items={result.strengths} /><ResultBlock title="Skills to strengthen" tone="orange" items={result.gaps} /></div><ResultBlock title="Suggested improvements" tone="blue" items={result.improvements} numbered /><div className="questions"><div className="block-heading"><span className="block-icon purple">?</span><div><h3>Role-specific questions</h3><p>Use these to rehearse your strongest answers.</p></div></div>{result.questions.map((question, index) => <div className="question" key={question}><span>0{index + 1}</span><p>{question}</p><span className="arrow">↗</span></div>)}</div></div>; }
+function ResultBlock({ title, tone, items, numbered = false }: { title: string; tone: string; items: string[]; numbered?: boolean }) { return <div className={`result-block ${tone}`}><div className="block-heading"><span className={`block-icon ${tone}`}>{numbered ? "↗" : "✓"}</span><h3>{title}</h3></div><ul>{items.map((item, index) => <li key={item}>{numbered && <span className="item-number">{index + 1}</span>}{item}</li>)}</ul></div>; }
