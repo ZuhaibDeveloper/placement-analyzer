@@ -1,34 +1,251 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  FileText,
+  Lightbulb,
+  MessageCircleQuestion,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Upload,
+} from "lucide-react";
 
-type Analysis = { score: number; summary: string; strengths: string[]; gaps: string[]; improvements: string[]; questions: string[]; source?: "gemini" | "local"; fallbackReason?: string };
-const sampleResume = `Aarav Sharma\nComputer Science student with projects in React and Python.\n\nSkills: JavaScript, React, HTML, CSS, Python, SQL, Git, REST APIs\nProjects: Built a task manager with React and a sentiment analysis model with Python.\nEducation: B.Tech Computer Science, 2026`;
-const sampleJob = `Frontend Developer Intern\nWe are looking for a developer who can build accessible, responsive interfaces.\n\nRequirements: React, TypeScript, Next.js, REST APIs, Git, testing, responsive design and communication.`;
+type Analysis = {
+  score: number;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  improvements: string[];
+  questions: string[];
+  source?: "gemini" | "local";
+  fallbackReason?: string;
+};
+
+const sampleResume = `Aarav Sharma
+Computer Science student with projects in React and Python.
+
+Skills: JavaScript, React, HTML, CSS, Python, SQL, Git, REST APIs
+Projects: Built a task manager with React and a sentiment analysis model with Python.
+Education: B.Tech Computer Science, 2026`;
+const sampleJob = `Frontend Developer Intern
+We are looking for a developer who can build accessible, responsive interfaces.
+
+Requirements: React, TypeScript, Next.js, REST APIs, Git, testing, responsive design and communication.`;
 
 function localAnalysis(resume: string, job: string, role: string): Analysis {
   const skills = ["React", "TypeScript", "Next.js", "JavaScript", "Python", "SQL", "Git", "REST APIs", "testing", "responsive design"];
-  const resumeLower = resume.toLowerCase(), jobLower = job.toLowerCase();
+  const resumeLower = resume.toLowerCase();
+  const jobLower = job.toLowerCase();
   const requested = skills.filter((skill) => jobLower.includes(skill.toLowerCase()));
   const strengths = requested.filter((skill) => resumeLower.includes(skill.toLowerCase()));
   const gaps = requested.filter((skill) => !resumeLower.includes(skill.toLowerCase()));
   const score = requested.length ? Math.max(35, Math.round((strengths.length / requested.length) * 100)) : 62;
-  return { score, summary: `Your profile shows a ${score >= 70 ? "strong" : "promising"} starting point for the ${role || "target"} role. Focus on the missing skills below and make your project impact more measurable.`, strengths: strengths.length ? strengths : ["Clear technical foundation", "Hands-on project experience", "Relevant computer science education"], gaps: gaps.length ? gaps : ["Add role-specific tools from the job description", "Show testing or deployment experience"], improvements: ["Add numbers to project outcomes, such as speed, users, or accuracy.", "Put the most relevant skills and project near the top of your resume.", "Create one small project that demonstrates the highest-priority missing skill."], questions: [`Walk me through a project that best prepares you for this ${role || "role"}.`, `How would you build and test a responsive feature for this team?`, "Tell me about a technical problem you faced and how you debugged it.", `How would you improve your experience with ${gaps[0] || "the most important requirement"}?`] };
+
+  return {
+    source: "local",
+    score,
+    summary: `Your profile shows a ${score >= 70 ? "strong" : "promising"} starting point for the ${role || "target"} role. Focus on the missing skills below and make your project impact more measurable.`,
+    strengths: strengths.length ? strengths : ["Clear technical foundation", "Hands-on project experience", "Relevant computer science education"],
+    gaps: gaps.length ? gaps : ["Add role-specific tools from the job description", "Show testing or deployment experience"],
+    improvements: ["Add numbers to project outcomes, such as speed, users, or accuracy.", "Put the most relevant skills and project near the top of your resume.", "Create one small project that demonstrates the highest-priority missing skill."],
+    questions: [
+      `Walk me through a project that best prepares you for this ${role || "role"}.`,
+      "How would you build and test a responsive feature for this team?",
+      "Tell me about a technical problem you faced and how you debugged it.",
+      `How would you improve your experience with ${gaps[0] || "the most important requirement"}?`,
+    ],
+  };
 }
 
 export default function Home() {
-  const [resume, setResume] = useState(""), [job, setJob] = useState(""), [role, setRole] = useState("");
-  const [result, setResult] = useState<Analysis | null>(null), [loading, setLoading] = useState(false), [uploading, setUploading] = useState<"resume" | "job" | "">(""), [error, setError] = useState("");
-  const fillSample = () => { setResume(sampleResume); setJob(sampleJob); setRole("Frontend Developer Intern"); setResult(null); setError(""); };
-  const uploadPdf = async (file: File, target: "resume" | "job") => { setUploading(target); setError(""); try { const formData = new FormData(); formData.append("file", file); const response = await fetch("/api/extract", { method: "POST", body: formData }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "PDF could not be read"); if (target === "resume") setResume(data.text); else setJob(data.text); } catch (uploadError) { setError(uploadError instanceof Error ? uploadError.message : "PDF could not be read"); } finally { setUploading(""); } };
-  const analyze = async (event: FormEvent) => { event.preventDefault(); if (!resume.trim() || !job.trim()) { setError("Resume aur job description dono add karo."); return; } setLoading(true); setError(""); try { const response = await fetch("/api/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ resume, job, role }) }); if (!response.ok) throw new Error("Analysis failed"); setResult(await response.json()); } catch { setResult(localAnalysis(resume, job, role)); setError("AI service unavailable. Local demo analysis dikhaya ja raha hai."); } finally { setLoading(false); } };
-  return <main className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-mark">✦</span><span>CareerLens</span></div><div className="topbar-meta"><span className="status-dot" /> Local workspace <span className="divider" /> AI placement analyzer</div></header>
-    <section className="intro"><div><p className="eyebrow">PLACEMENT TOOLKIT / 01</p><h1>Know how ready you are<br /><em>for the role.</em></h1><p className="lede">Compare your resume with any job description and turn the gaps into a focused preparation plan.</p></div><button className="sample-button" onClick={fillSample}>↗ Load sample data</button></section>
-    <form className="workspace" onSubmit={analyze}><section className="inputs-panel"><SectionLabel number="01" title="Add your details" subtitle="Paste text or upload a PDF from your resume and target job." /><div className="field-row"><label className="field small-field"><span>Target role <b>optional</b></span><input value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Frontend Developer" /></label></div><div className="field-row two-col"><label className="field"><span>Resume <b>required</b></span><div className="upload-row"><input className="file-input" type="file" accept="application/pdf,.pdf" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadPdf(file, "resume"); }} /><span>{uploading === "resume" ? "Reading PDF..." : "Upload resume PDF"}</span></div><textarea value={resume} onChange={(e) => setResume(e.target.value)} placeholder="Paste your resume text here..." /></label><label className="field"><span>Job description <b>required</b></span><div className="upload-row"><input className="file-input" type="file" accept="application/pdf,.pdf" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadPdf(file, "job"); }} /><span>{uploading === "job" ? "Reading PDF..." : "Upload job PDF"}</span></div><textarea value={job} onChange={(e) => setJob(e.target.value)} placeholder="Paste the job description here..." /></label></div><div className="form-footer"><span className="privacy-note">◉ Your text stays in this local demo.</span><button className="analyze-button" disabled={loading || Boolean(uploading)}>{loading ? "Analyzing..." : "Analyze match  →"}</button></div>{error && <p className="notice">{error}</p>}</section><section className="results-panel"><SectionLabel number="02" title="Your analysis" subtitle="Signals that help you prepare with intent." />{!result ? <div className="empty-state"><div className="empty-icon">✦</div><h3>Your results will appear here</h3><p>Fill in both fields, then run an analysis to see your match score, skill gaps and interview prep.</p></div> : <Results result={result} />}</section></form>
-    <footer><span>CareerLens</span><span>Built for smarter placement prep</span><span>v0.1 · local demo</span></footer>
-  </main>;
+  const [resume, setResume] = useState("");
+  const [job, setJob] = useState("");
+  const [role, setRole] = useState("");
+  const [result, setResult] = useState<Analysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState<"resume" | "job" | "">("");
+  const [error, setError] = useState("");
+
+  const fillSample = () => {
+    setResume(sampleResume);
+    setJob(sampleJob);
+    setRole("Frontend Developer Intern");
+    setResult(null);
+    setError("");
+  };
+
+  const uploadPdf = async (file: File, target: "resume" | "job") => {
+    setUploading(target);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/extract", { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "PDF could not be read");
+      if (target === "resume") setResume(data.text);
+      else setJob(data.text);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "PDF could not be read");
+    } finally {
+      setUploading("");
+    }
+  };
+
+  const handleFile = (event: ChangeEvent<HTMLInputElement>, target: "resume" | "job") => {
+    const file = event.target.files?.[0];
+    if (file) void uploadPdf(file, target);
+    event.target.value = "";
+  };
+
+  const analyze = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!resume.trim() || !job.trim()) {
+      setError("Add both your resume and the job description before analyzing.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume, job, role }),
+      });
+      if (!response.ok) throw new Error("Analysis failed");
+      setResult(await response.json());
+    } catch {
+      setResult(localAnalysis(resume, job, role));
+      setError("AI service unavailable. Showing a local analysis instead.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="app-shell r-w">
+      <header className="site-header">
+        <a className="brand" href="#top" aria-label="CareerLens home"><span className="brand-mark"><Sparkles size={17} /></span>CareerLens</a>
+        <div className="header-context"><span className="live-dot" /> AI placement workspace <span className="header-divider" /> v0.1</div>
+      </header>
+
+      <section className="hero" id="top">
+        <div className="hero-copy">
+          <div className="eyebrow"><Target size={13} /> Career intelligence</div>
+          <h1>Make every application<br /><span>feel intentional.</span></h1>
+          <p>See how your resume fits a role, what needs work, and exactly how to prepare for the conversation that follows.</p>
+        </div>
+        <div className="hero-actions">
+          <div className="hero-signal"><span>01</span><p>Resume + role<br />in one focused view</p></div>
+          <button className="sample-button" type="button" onClick={fillSample}><RefreshCw size={15} /> Try sample data</button>
+        </div>
+      </section>
+
+      <form className="workbench" onSubmit={analyze}>
+        <section className="editor-panel" aria-labelledby="editor-title">
+          <div className="panel-heading">
+            <div className="panel-number">01</div>
+            <div><p className="panel-kicker">YOUR MATERIAL</p><h2 id="editor-title">Build your match brief</h2></div>
+            <span className="panel-status">Draft</span>
+          </div>
+
+          <div className="role-field">
+            <label htmlFor="role"><BriefcaseBusiness size={15} /> Target role <span>Optional</span></label>
+            <input id="role" value={role} onChange={(event) => setRole(event.target.value)} placeholder="e.g. Backend Developer" />
+          </div>
+
+          <div className="document-grid">
+            <DocumentField
+              label="Your resume"
+              helper="PDF or pasted text"
+              icon={<FileText size={17} />}
+              value={resume}
+              placeholder="Paste your resume here, or upload a text-based PDF."
+              uploading={uploading === "resume"}
+              onChange={setResume}
+              onFileChange={(event) => handleFile(event, "resume")}
+            />
+            <DocumentField
+              label="Company requirements"
+              helper="Job post or JD"
+              icon={<BriefcaseBusiness size={17} />}
+              value={job}
+              placeholder="Paste the complete job description, responsibilities and required skills."
+              uploading={uploading === "job"}
+              onChange={setJob}
+              onFileChange={(event) => handleFile(event, "job")}
+            />
+          </div>
+
+          <div className="editor-footer">
+            <div className="privacy-copy"><ShieldCheck size={16} /><span>Private session. Your files are only used to create this analysis.</span></div>
+            <button className="analyze-button" disabled={loading || Boolean(uploading)}>
+              {loading ? <><RefreshCw className="spin" size={17} /> Reading your profile</> : <>Analyze my fit <ArrowRight size={17} /></>}
+            </button>
+          </div>
+          {error && <p className="notice"><CircleAlert size={15} /> {error}</p>}
+        </section>
+
+        <section className="analysis-panel" aria-labelledby="analysis-title">
+          <div className="panel-heading analysis-heading">
+            <div className="panel-number">02</div>
+            <div><p className="panel-kicker">ROLE ANALYSIS</p><h2 id="analysis-title">Your readiness report</h2></div>
+            {result && <SourcePill result={result} />}
+          </div>
+          <div className="analysis-scroll">
+            {loading ? <LoadingState /> : result ? <Results result={result} /> : <EmptyState />}
+          </div>
+        </section>
+      </form>
+
+      <footer><span>CareerLens</span><span>Made for sharper placement prep</span><span>Local demo</span></footer>
+    </main>
+  );
 }
-function SectionLabel({ number, title, subtitle }: { number: string; title: string; subtitle: string }) { return <div className="section-label"><span>{number}</span><div><h2>{title}</h2><p>{subtitle}</p></div></div>; }
-function Results({ result }: { result: Analysis }) { return <div className="results-content"><div className="score-row"><div className="score-ring" style={{ "--score": `${result.score * 3.6}deg` } as React.CSSProperties}><strong>{result.score}</strong><span>/100</span></div><div><p className="result-kicker">Resume fit score <span className={`source-badge ${result.source === "gemini" ? "ai" : "local"}`}>{result.source === "gemini" ? "✦ Gemini AI" : "○ Local fallback"}</span></p><h3>{result.score >= 70 ? "Strong match" : "Good foundation"}</h3><p className="summary">{result.summary}</p>{result.fallbackReason && <p className="fallback-reason">AI unavailable: {result.fallbackReason}</p>}</div></div><div className="result-grid"><ResultBlock title="What already works" tone="green" items={result.strengths} /><ResultBlock title="Skills to strengthen" tone="orange" items={result.gaps} /></div><ResultBlock title="Suggested improvements" tone="blue" items={result.improvements} numbered /><div className="questions"><div className="block-heading"><span className="block-icon purple">?</span><div><h3>Role-specific questions</h3><p>Use these to rehearse your strongest answers.</p></div></div>{result.questions.map((question, index) => <div className="question" key={question}><span>0{index + 1}</span><p>{question}</p><span className="arrow">↗</span></div>)}</div></div>; }
-function ResultBlock({ title, tone, items, numbered = false }: { title: string; tone: string; items: string[]; numbered?: boolean }) { return <div className={`result-block ${tone}`}><div className="block-heading"><span className={`block-icon ${tone}`}>{numbered ? "↗" : "✓"}</span><h3>{title}</h3></div><ul>{items.map((item, index) => <li key={item}>{numbered && <span className="item-number">{index + 1}</span>}{item}</li>)}</ul></div>; }
+
+function DocumentField({ label, helper, icon, value, placeholder, uploading, onChange, onFileChange }: { label: string; helper: string; icon: React.ReactNode; value: string; placeholder: string; uploading: boolean; onChange: (value: string) => void; onFileChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
+  return <div className="document-field">
+    <div className="document-label"><div className="document-icon">{icon}</div><div><strong>{label}</strong><span>{helper}</span></div></div>
+    <label className={`upload-control ${uploading ? "is-uploading" : ""}`}><Upload size={15} /><span>{uploading ? "Extracting text..." : "Upload PDF"}</span><input type="file" accept="application/pdf,.pdf" onChange={onFileChange} /></label>
+    <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+    <div className="field-meta"><span>{value.trim() ? `${value.trim().length.toLocaleString()} characters` : "Awaiting content"}</span><span>Text editable</span></div>
+  </div>;
+}
+
+function SourcePill({ result }: { result: Analysis }) {
+  const isAi = result.source === "gemini";
+  return <span className={`source-pill ${isAi ? "ai" : "local"}`}>{isAi ? <Sparkles size={13} /> : <CircleAlert size={13} />}{isAi ? "Gemini AI" : "Local fallback"}</span>;
+}
+
+function EmptyState() {
+  return <div className="empty-state"><div className="empty-orbit"><div><Sparkles size={25} /></div></div><p className="empty-eyebrow">YOUR NEXT MOVE</p><h3>Turn uncertainty into a plan.</h3><p>Add your resume and a complete job description. Your score, strengths, gaps and interview prep will stay right here.</p><div className="empty-checks"><span><Check size={14} /> Skill match</span><span><Check size={14} /> Gap map</span><span><Check size={14} /> Interview prep</span></div></div>;
+}
+
+function LoadingState() {
+  return <div className="loading-state"><div className="loading-mark"><Sparkles size={25} /></div><h3>Finding the important signals</h3><p>Comparing skills, experience and role expectations.</p><div className="loading-lines"><i /><i /><i /></div></div>;
+}
+
+function Results({ result }: { result: Analysis }) {
+  const scoreLabel = result.score >= 75 ? "Strong match" : result.score >= 55 ? "Good foundation" : "Growth opportunity";
+  return <div className="results-content">
+    <div className="score-card">
+      <div className="score-ring" style={{ "--score": `${result.score * 3.6}deg` } as React.CSSProperties}><div><strong>{result.score}</strong><span>/100</span></div></div>
+      <div><p className="score-eyebrow">MATCH SNAPSHOT</p><h3>{scoreLabel}</h3><p>{result.summary}</p></div>
+    </div>
+    {result.fallbackReason && <p className="fallback-note"><CircleAlert size={14} /> AI is temporarily unavailable. This is a local estimate.</p>}
+    <div className="insight-grid"><InsightBlock title="Already in your corner" icon={<Check size={15} />} tone="positive" items={result.strengths} /><InsightBlock title="Worth strengthening" icon={<Target size={15} />} tone="warning" items={result.gaps} /></div>
+    <InsightBlock title="Your next three moves" icon={<Lightbulb size={15} />} tone="action" items={result.improvements} numbered />
+    <div className="questions-block"><div className="result-title"><span className="title-icon question"><MessageCircleQuestion size={15} /></span><div><h3>Interview rehearsal</h3><p>Practice these before you apply.</p></div></div>{result.questions.map((question, index) => <div className="question-row" key={question}><span>{String(index + 1).padStart(2, "0")}</span><p>{question}</p><ChevronRight size={16} /></div>)}</div>
+  </div>;
+}
+
+function InsightBlock({ title, icon, tone, items, numbered = false }: { title: string; icon: React.ReactNode; tone: "positive" | "warning" | "action"; items: string[]; numbered?: boolean }) {
+  return <div className={`insight-block ${tone}`}><div className="result-title"><span className="title-icon">{icon}</span><h3>{title}</h3></div><ul>{items.map((item, index) => <li key={item}>{numbered ? <span className="list-number">{index + 1}</span> : <span className="list-mark">{tone === "positive" ? <Check size={14} /> : "+"}</span>}<span>{item}</span></li>)}</ul></div>;
+}
