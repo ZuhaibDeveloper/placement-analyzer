@@ -28,7 +28,8 @@ button { cursor: pointer; }
 
 .site-header { height: 68px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 16px; font-weight: 800; text-decoration: none; }
-.brand-mark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: var(--mint); color: var(--green); }
+.brand-mark { width: 28px; height: 28px; display: block; flex: 0 0 28px; overflow: hidden; border-radius: 8px; }
+.brand-mark img { display: block; width: 100%; height: 100%; }
 .header-context { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #72ba4e; box-shadow: 0 0 0 4px #e5f4df; }
 .header-divider { width: 1px; height: 16px; margin-inline: 4px; background: var(--line); }

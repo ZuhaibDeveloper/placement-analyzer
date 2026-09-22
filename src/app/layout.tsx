@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CareerLens | AI Placement Analyzer",
+  title: "PrepMint | AI Placement Analyzer",
   description: "Compare your resume with a role and get a focused placement preparation plan.",
-  applicationName: "CareerLens",
+  applicationName: "PrepMint",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

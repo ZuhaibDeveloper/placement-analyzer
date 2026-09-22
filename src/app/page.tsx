@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useState } from "react";
+import Image from "next/image";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -132,7 +133,7 @@ export default function Home() {
   return (
     <main className="app-shell r-w">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="CareerLens home"><span className="brand-mark"><Sparkles size={17} /></span>CareerLens</a>
+        <a className="brand" href="#top" aria-label="PrepMint home"><span className="brand-mark"><Image src="/icon.svg" alt="" width={28} height={28} priority /></span>PrepMint</a>
         <div className="header-context"><span className="live-dot" /> AI placement workspace <span className="header-divider" /> v0.1</div>
       </header>
 
@@ -205,7 +206,7 @@ export default function Home() {
         </section>
       </form>
 
-      <footer><span>CareerLens</span><span>Made for sharper placement prep</span><span>Local demo</span></footer>
+      <footer><span>PrepMint</span><span>Made for sharper placement prep</span><span>Local demo</span></footer>
     </main>
   );
 }
