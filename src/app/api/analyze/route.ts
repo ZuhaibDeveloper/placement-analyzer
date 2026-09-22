@@ -18,10 +18,18 @@ export async function POST(request: Request) {
   if (!key) return NextResponse.json({ ...fallback(resume, job, role), fallbackReason: "missing_key" });
   const prompt = `You are a career placement analyst. Compare this resume with this job description. Return ONLY valid JSON with exactly these keys: score (integer 0-100), summary (string), strengths (array of 3-5 short strings), gaps (array of 3-5 short strings), improvements (array of 3 short actionable strings), questions (array of exactly 4 role-specific interview questions). Be practical and honest. Target role: ${role || "not provided"}\nRESUME:\n${resume}\nJOB DESCRIPTION:\n${job}`;
   try {
-    const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
     const requestBody = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.3 } };
-    let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody) });
-    if (response.status === 429 || response.status === 503) { await new Promise((resolve) => setTimeout(resolve, 900)); response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody) }); }
+    const primaryModel = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+    const models = [...new Set([primaryModel, "gemini-3.1-flash-lite"])];
+    let response: Response | undefined;
+
+    for (const model of models) {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody) });
+      if (response.ok || (response.status !== 429 && response.status !== 503)) break;
+      console.warn(`Gemini model ${model} is temporarily unavailable; trying backup model.`);
+    }
+
+    if (!response) throw new Error("No Gemini response received");
     if (!response.ok) { const errorBody = await response.text(); console.error("Gemini request failed with status", response.status, errorBody); return NextResponse.json({ ...fallback(resume, job, role), fallbackReason: `gemini_${response.status}` }); }
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
