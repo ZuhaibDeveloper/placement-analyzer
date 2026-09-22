@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "PrepMint | AI Placement Analyzer",
   description: "Compare your resume with a role and get a focused placement preparation plan.",
   applicationName: "PrepMint",
+  verification: {
+    google: "SOxKQToiADYWeiMP-zO5-hd_tw7wZgl9kKMzUzCALlg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
