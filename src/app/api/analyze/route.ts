@@ -24,8 +24,13 @@ export async function POST(request: Request) {
     let response: Response | undefined;
 
     for (const model of models) {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody) });
-      if (response.ok || (response.status !== 429 && response.status !== 503)) break;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify(requestBody) });
+        if (response.ok || (response.status !== 429 && response.status !== 503)) break;
+        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1200));
+      }
+
+      if (response?.ok || (response && response.status !== 429 && response.status !== 503)) break;
       console.warn(`Gemini model ${model} is temporarily unavailable; trying backup model.`);
     }
 
